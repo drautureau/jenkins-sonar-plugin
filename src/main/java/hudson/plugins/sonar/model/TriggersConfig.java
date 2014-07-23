@@ -89,6 +89,21 @@ public class TriggersConfig implements Serializable {
       // unstable means that build completed, but there were some test failures, which is not critical for analysis
       return Messages.SonarPublisher_BadBuildStatus(build.getResult().toString());
     }
+    
+ // skip analysis, when all causes from blacklist
+    List<Cause> causes = new ArrayList<Cause>(build.getCauses());
+    Iterator<Cause> iter = causes.iterator();
+    while (iter.hasNext()) {
+      Cause cause = iter.next();
+      if (SCMTrigger.SCMTriggerCause.class.isInstance(cause) && isSkipScmCause()) {
+        iter.remove();
+      } else if (Cause.UpstreamCause.class.isInstance(cause) && isSkipUpstreamCause()) {
+        iter.remove();
+      }
+    }
+    if (causes.isEmpty()) {
+      return Messages.Skipping_Sonar_analysis();
+    }
 
     // skip analysis by environment variable or build parameter
     if (getEnvVar() != null) {
@@ -104,19 +119,8 @@ public class TriggersConfig implements Serializable {
         return Messages.Skipping_Sonar_analysis();
       }
     }
-
-    // skip analysis, when all causes from blacklist
-    List<Cause> causes = new ArrayList<Cause>(build.getCauses());
-    Iterator<Cause> iter = causes.iterator();
-    while (iter.hasNext()) {
-      Cause cause = iter.next();
-      if (SCMTrigger.SCMTriggerCause.class.isInstance(cause) && isSkipScmCause()) {
-        iter.remove();
-      } else if (Cause.UpstreamCause.class.isInstance(cause) && isSkipUpstreamCause()) {
-        iter.remove();
-      }
-    }
-    return causes.isEmpty() ? Messages.Skipping_Sonar_analysis() : null;
+    
+    return null;
   }
 
   /**
